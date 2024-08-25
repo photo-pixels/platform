@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"github.com/photo-pixels/platform/log"
 	"net"
 	"net/http"
 	"time"
@@ -16,6 +15,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/photo-pixels/platform/log"
 )
 
 type HandlerFromEndpoint = func(context.Context, *rn.ServeMux, string, []grpc.DialOption) error
