@@ -91,6 +91,16 @@ func FailPreconditionf(description string, a ...any) error {
 	}
 }
 
+func InvalidInputf(description string, a ...any) error {
+	return &ErrorService{
+		Type: InvalidInputDataErrorType,
+		Err:  fmt.Errorf(description, a...),
+		ErrInfo: ErrorInfo{
+			Description: fmt.Sprintf(description, a...),
+		},
+	}
+}
+
 // InvalidInput создание ошибки входных данных
 func InvalidInput(trans ut.Translator, err error, formName string) error {
 	fields := make([]FieldViolation, 0)
