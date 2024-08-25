@@ -3,6 +3,9 @@ package serviceerr
 import (
 	"errors"
 	"fmt"
+
+	ut "github.com/go-playground/universal-translator"
+	"github.com/go-playground/validator/v10"
 )
 
 // ErrorServiceType типы ошибок сервисов
@@ -45,43 +48,13 @@ func (r *ErrorService) Unwrap() error {
 	return r.Err
 }
 
-func IsNotFound(err error) bool {
-	var serviceErr *ErrorService
-	if errors.As(err, &serviceErr) {
-		return serviceErr.Type == NotFoundErrorType
-	}
-	return false
-}
-
-// InvalidInputf создание ошибки входных данных
-func InvalidInputf(description string, a ...any) error {
-	return &ErrorService{
-		Type: InvalidInputDataErrorType,
-		Err:  fmt.Errorf(description, a...),
-		ErrInfo: ErrorInfo{
-			Description: "Invalid input",
-		},
-	}
-}
-
-// InvalidInputErr создание ошибки входных данных
-func InvalidInputErr(err error, method string) error {
-	return &ErrorService{
-		Type: InvalidInputDataErrorType,
-		Err:  fmt.Errorf(method+": %w", err),
-		ErrInfo: ErrorInfo{
-			Description: "Invalid input",
-		},
-	}
-}
-
 // NotFoundf создание ошибки - не найдено
 func NotFoundf(description string, a ...any) error {
 	return &ErrorService{
 		Type: NotFoundErrorType,
 		Err:  fmt.Errorf(description, a...),
 		ErrInfo: ErrorInfo{
-			Description: "Not found",
+			Description: fmt.Sprintf(description, a...),
 		},
 	}
 }
@@ -92,7 +65,17 @@ func Conflictf(description string, a ...any) error {
 		Type: ConflictErrorType,
 		Err:  fmt.Errorf(description, a...),
 		ErrInfo: ErrorInfo{
-			Description: "Conflict",
+			Description: fmt.Sprintf(description, a...),
+		},
+	}
+}
+
+func PermissionDeniedf(description string, a ...any) error {
+	return &ErrorService{
+		Type: PermissionDeniedType,
+		Err:  fmt.Errorf(description, a...),
+		ErrInfo: ErrorInfo{
+			Description: fmt.Sprintf(description, a...),
 		},
 	}
 }
@@ -103,28 +86,29 @@ func FailPreconditionf(description string, a ...any) error {
 		Type: FailPreconditionErrorType,
 		Err:  fmt.Errorf(description, a...),
 		ErrInfo: ErrorInfo{
-			Description: "FailPrecondition",
+			Description: fmt.Sprintf(description, a...),
 		},
 	}
 }
 
-func PermissionDeniedf(description string, a ...any) error {
-	return &ErrorService{
-		Type: PermissionDeniedType,
-		Err:  fmt.Errorf(description, a...),
-		ErrInfo: ErrorInfo{
-			Description: "PermissionDenied",
-		},
+// InvalidInput создание ошибки входных данных
+func InvalidInput(trans ut.Translator, err error, formName string) error {
+	fields := make([]FieldViolation, 0)
+	var validationErrors validator.ValidationErrors
+	if errors.As(err, &validationErrors) {
+		for _, validationErr := range validationErrors {
+			fields = append(fields, FieldViolation{
+				Field:    validationErr.Field(),
+				ErrorMsg: validationErr.Translate(trans),
+			})
+		}
 	}
-}
-
-// PermissionDeniedErr .
-func PermissionDeniedErr(err error) error {
 	return &ErrorService{
-		Type: PermissionDeniedType,
-		Err:  err,
+		Type: InvalidInputDataErrorType,
+		Err:  fmt.Errorf(formName+": %w", err),
 		ErrInfo: ErrorInfo{
-			Description: "Permission Denied",
+			Description:     fmt.Sprintf("Form data validation error %s", formName),
+			FieldViolations: fields,
 		},
 	}
 }
